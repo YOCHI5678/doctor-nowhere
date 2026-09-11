@@ -1,0 +1,545 @@
+fnaf_html_content = """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIVE NIGHTS AT DOCTOR NOWHERE'S</title>
+<style>
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+    }
+    body {
+        background-color: #000;
+        color: #fff;
+        font-family: 'Courier New', Courier, monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        overflow: hidden;
+    }
+
+    #game-container {
+        position: relative;
+        width: 800px;
+        height: 500px;
+        background: #08080a;
+        border: 4px solid #222;
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);
+        overflow: hidden;
+    }
+
+    /* Scanlines VHS */
+    .scanlines {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
+        background-size: 100% 4px;
+        pointer-events: none;
+        z-index: 50;
+    }
+
+    /* OFICINA 3D SIMULADA */
+    #office-view {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at center, #1a1515 0%, #050505 80%);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 20px;
+    }
+
+    /* Ventana del medio y puertas laterales */
+    .office-walls {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .door-frame {
+        width: 140px;
+        height: 100%;
+        background: #111;
+        border: 3px solid #222;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .door-light {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        transition: background 0.1s;
+    }
+
+    .door-light.on {
+        background: rgba(255, 230, 150, 0.15);
+        box-shadow: inset 0 0 50px rgba(255, 200, 100, 0.2);
+    }
+
+    .door-closed-graphic {
+        position: absolute;
+        top: -100%;
+        left: 0; width: 100%; height: 100%;
+        background: linear-gradient(180deg, #333, #111);
+        border-bottom: 5px solid #555;
+        transition: top 0.25s ease-in-out;
+        z-index: 5;
+    }
+
+    .door-closed-graphic.closed {
+        top: 0;
+    }
+
+    /* MONSTRUOS DIBUJADOS EN SVG RETRO */
+    .monster-svg {
+        display: none;
+        width: 120px;
+        height: 200px;
+        position: absolute;
+        z-index: 4;
+        filter: drop-shadow(0 0 10px #ff0000);
+    }
+
+    /* CAMARAS OVERLAY */
+    #camera-view {
+        display: none;
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: #040406;
+        z-index: 20;
+    }
+
+    #cam-feed {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .cam-label {
+        position: absolute;
+        top: 20px; left: 20px;
+        color: #00ff66;
+        font-weight: bold;
+        font-size: 1.2rem;
+        text-shadow: 0 0 5px #00ff66;
+    }
+
+    /* MAPA DE CAMARAS */
+    .cam-map {
+        position: absolute;
+        bottom: 20px; right: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        background: rgba(0,0,0,0.6);
+        padding: 10px;
+        border: 1fr solid #444;
+    }
+
+    .cam-btn {
+        background: #222;
+        color: #fff;
+        border: 1px solid #555;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    .cam-btn.active {
+        background: #00ff66;
+        color: #000;
+        font-weight: bold;
+    }
+
+    /* HUD */
+    #hud {
+        position: absolute;
+        top: 15px; left: 15px;
+        z-index: 30;
+        font-size: 1rem;
+        color: #ff4444;
+        text-shadow: 1px 1px 2px #000;
+    }
+
+    #time-display {
+        position: absolute;
+        top: 15px; right: 15px;
+        z-index: 30;
+        font-size: 1.2rem;
+        color: #fff;
+        font-weight: bold;
+    }
+
+    /* CONTROLES ABAJO */
+    #bottom-bar {
+        position: absolute;
+        bottom: 0; left: 0; width: 100%;
+        height: 50px;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 35;
+    }
+
+    .ctrl-btn {
+        background: #1a1a1a;
+        color: #fff;
+        border: 1px solid #555;
+        padding: 8px 16px;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    .ctrl-btn:hover { background: #333; }
+
+    /* JUMPSCARE SCREEN */
+    #jumpscare-screen {
+        display: none;
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: #000;
+        z-index: 100;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #jumpscare-face {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: shake 0.05s infinite alternate;
+    }
+
+    @keyframes shake {
+        0% { transform: scale(1.3) translate(-10px, 10px); }
+        100% { transform: scale(1.4) translate(10px, -10px); }
+    }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="scanlines"></div>
+
+    <div id="hud">
+        BATERÍA: <span id="power-val">100%</span> | USO: <span id="usage-val">BAJO</span>
+    </div>
+    <div id="time-display"><span id="hour-val">12</span> AM (NOCHE 1)</div>
+
+    <!-- VISTA OFICINA -->
+    <div id="office-view">
+        <div class="office-walls">
+            <!-- PUERTA IZQUIERDA -->
+            <div class="door-frame" id="door-left-frame">
+                <div class="door-closed-graphic" id="door-left"></div>
+                <div class="door-light" id="light-left">
+                    <!-- THE BOILED ONE SVG -->
+                    <svg id="monster-left" class="monster-svg" viewBox="0 0 100 200">
+                        <path d="M 30,30 Q 50,5 70,30 Q 85,90 70,180 L 30,180 Q 15,90 30,30 Z" fill="#880000" stroke="#ff0000" stroke-width="3"/>
+                        <circle cx="40" cy="50" r="8" fill="#fff"/><circle cx="40" cy="50" r="3" fill="#000"/>
+                        <circle cx="60" cy="50" r="8" fill="#fff"/><circle cx="60" cy="50" r="3" fill="#000"/>
+                        <ellipse cx="50" cy="90" rx="12" ry="25" fill="#000"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div style="text-align: center; color: #444;">
+                <h3 style="color: #666; font-size: 0.9rem;">ESCRITORIO DE SEGURIDAD</h3>
+                <p style="font-size: 0.7rem; margin-top: 5px;">MANTÉN EL CONTROL DE LAS PUERTAS</p>
+            </div>
+
+            <!-- PUERTA DERECHA -->
+            <div class="door-frame" id="door-right-frame">
+                <div class="door-closed-graphic" id="door-right"></div>
+                <div class="door-light" id="light-right">
+                    <!-- THE LOCUST SVG -->
+                    <svg id="monster-right" class="monster-svg" viewBox="0 0 100 200">
+                        <ellipse cx="50" cy="60" rx="25" ry="40" fill="#1a2515" stroke="#44ff44" stroke-width="2"/>
+                        <path d="M 25,60 Q 5,20 10,90 M 75,60 Q 95,20 90,90" stroke="#44ff44" stroke-width="4" fill="none"/>
+                        <circle cx="40" cy="55" r="5" fill="#ff0000"/>
+                        <circle cx="60" cy="55" r="5" fill="#ff0000"/>
+                        <path d="M 50,100 L 50,190 M 40,190 L 60,190" stroke="#1a2515" stroke-width="12"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="bottom-bar">
+            <button class="ctrl-btn" onclick="toggleDoor('left')">Puerta Izq (L)</button>
+            <button class="ctrl-btn" onclick="toggleLight('left')">Luz Izq (Q)</button>
+            <button class="ctrl-btn" style="background: #331111; border-color:#882222;" onclick="toggleMonitor()">VER CÁMARAS (ESPACIO)</button>
+            <button class="ctrl-btn" onclick="toggleLight('right')">Luz Der (E)</button>
+            <button class="ctrl-btn" onclick="toggleDoor('right')">Puerta Der (R)</button>
+        </div>
+    </div>
+
+    <!-- VISTA CAMARAS -->
+    <div id="camera-view">
+        <div id="cam-feed">
+            <div class="cam-label" id="cam-title">CAM 01 - PASILLO IZQUIERDO</div>
+            <div id="cam-monster-display" style="text-align: center;">
+                <p style="color: #555;">[ SEÑAL ESTABLE ]</p>
+            </div>
+        </div>
+        <div class="cam-map">
+            <button class="cam-btn active" onclick="switchCam(1)">CAM 1 (Izq)</button>
+            <button class="cam-btn" onclick="switchCam(2)">CAM 2 (Der)</button>
+        </div>
+        <button class="ctrl-btn" style="position: absolute; bottom: 20px; left: 20px; z-index: 25;" onclick="toggleMonitor()">BAJAR MONITOR</button>
+    </div>
+
+    <!-- PANTALLA JUMPSCARE -->
+    <div id="jumpscare-screen">
+        <div id="jumpscare-face">
+            <svg id="jumpscare-svg" viewBox="0 0 200 200" style="width: 350px; height: 350px;">
+                <!-- SE GENERA DINAMICAMENTE -->
+            </svg>
+        </div>
+        <h1 style="color: red; margin-top: 20px; text-shadow: 0 0 10px red;">TE HAN CONSUMIDO</h1>
+        <button class="ctrl-btn" style="margin-top: 15px;" onclick="location.reload()">REINTENTAR NOCHE</button>
+    </div>
+</div>
+
+<script>
+    // ESTADO DEL JUEGO
+    let power = 100;
+    let hour = 12;
+    let currentCam = 1;
+    let isCamOpen = false;
+    let gameOver = false;
+
+    let doorLeft = false;
+    let doorRight = false;
+    let lightLeft = false;
+    let lightRight = false;
+
+    // POSICIONES MONSTRUOS (0: Cam, 1: En Puerta, 2: DENTRO DE LA OFICINA)
+    let boiledOnePos = 0; // Ataca por la izquierda
+    let locustPos = 0;    // Ataca por la derecha
+
+    // AUDIO API (Efectos de sonido retro)
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioCtx();
+    }
+
+    function playSound(freq, type, duration, vol=0.1) {
+        try {
+            initAudio();
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch(e) {}
+    }
+
+    function playJumpscareSound() {
+        try {
+            initAudio();
+            // Grito cacofónico retro
+            for (let i = 0; i < 5; i++) {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150 + Math.random()*600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1.2);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.2);
+            }
+        } catch(e) {}
+    }
+
+    // INTERRUPTORES
+    function toggleDoor(side) {
+        if (gameOver) return;
+        playSound(180, 'square', 0.15, 0.2);
+        if (side === 'left') {
+            doorLeft = !doorLeft;
+            document.getElementById('door-left').classList.toggle('closed', doorLeft);
+        } else {
+            doorRight = !doorRight;
+            document.getElementById('door-right').classList.toggle('closed', doorRight);
+        }
+    }
+
+    function toggleLight(side) {
+        if (gameOver) return;
+        playSound(400, 'sine', 0.05, 0.05);
+        if (side === 'left') {
+            lightLeft = !lightLeft;
+            document.getElementById('light-left').classList.toggle('on', lightLeft);
+            document.getElementById('monster-left').style.display = (lightLeft && boiledOnePos === 1) ? 'block' : 'none';
+        } else {
+            lightRight = !lightRight;
+            document.getElementById('light-right').classList.toggle('on', lightRight);
+            document.getElementById('monster-right').style.display = (lightRight && locustPos === 1) ? 'block' : 'none';
+        }
+    }
+
+    function toggleMonitor() {
+        if (gameOver) return;
+        playSound(300, 'triangle', 0.1);
+        isCamOpen = !isCamOpen;
+        document.getElementById('camera-view').style.display = isCamOpen ? 'block' : 'none';
+        updateCamDisplay();
+    }
+
+    function switchCam(num) {
+        currentCam = num;
+        playSound(600, 'sine', 0.05);
+        document.querySelectorAll('.cam-btn').forEach((b, i) => b.classList.toggle('active', i+1 === num));
+        document.getElementById('cam-title').innerText = num === 1 ? "CAM 01 - PASILLO IZQUIERDO" : "CAM 02 - PASILLO DERECHO";
+        updateCamDisplay();
+    }
+
+    function updateCamDisplay() {
+        let display = document.getElementById('cam-monster-display');
+        if (currentCam === 1 && boiledOnePos === 0) {
+            display.innerHTML = `<h2 style="color:red; animation: shake 0.1s infinite;">[ ALERTA: THE BOILED ONE DETECTADO EN CAM 1 ]</h2>`;
+        } else if (currentCam === 2 && locustPos === 0) {
+            display.innerHTML = `<h2 style="color:#44ff44;">[ ALERTA: THE LOCUST DETECTADO EN CAM 2 ]</h2>`;
+        } else {
+            display.innerHTML = `<p style="color: #555;">[ SEÑAL LIMPIA - NO HAY AMENAZA EN CÁMARA ]</p>`;
+        }
+    }
+
+    // IA DE MONSTRUOS (FNAF LOOP)
+    setInterval(() => {
+        if (gameOver) return;
+
+        // Movimiento The Boiled One (Izq)
+        if (Math.random() < 0.4) {
+            if (boiledOnePos === 0) boiledOnePos = 1; // Avanza a la puerta
+            else if (boiledOnePos === 1) {
+                if (!doorLeft) boiledOnePos = 2; // Entra a la oficina si la puerta está abierta
+                else boiledOnePos = 0; // Choca con la puerta y regresa
+            }
+        }
+
+        // Movimiento The Locust (Der)
+        if (Math.random() < 0.35) {
+            if (locustPos === 0) locustPos = 1;
+            else if (locustPos === 1) {
+                if (!doorRight) locustPos = 2;
+                else locustPos = 0;
+            }
+        }
+
+        // Actualizar luz si está encendida
+        if (lightLeft) document.getElementById('monster-left').style.display = (boiledOnePos === 1) ? 'block' : 'none';
+        if (lightRight) document.getElementById('monster-right').style.display = (locustPos === 1) ? 'block' : 'none';
+
+        // Disparar Jumpscares si entraron
+        if (boiledOnePos === 2 && !isCamOpen) triggerJumpscare('boiled');
+        if (locustPos === 2 && !isCamOpen) triggerJumpscare('locust');
+
+        if (isCamOpen) updateCamDisplay();
+    }, 3000);
+
+    // BATERÍA Y TIEMPO
+    setInterval(() => {
+        if (gameOver) return;
+
+        // Consumo de luz/puertas/cámaras
+        let usage = 1;
+        if (doorLeft) usage++;
+        if (doorRight) usage++;
+        if (lightLeft) usage++;
+        if (lightRight) usage++;
+        if (isCamOpen) usage++;
+
+        power -= usage * 0.2;
+        document.getElementById('power-val').innerText = Math.max(0, Math.floor(power)) + "%";
+        document.getElementById('usage-val').innerText = usage > 3 ? "ALTO" : (usage > 1 ? "MEDIO" : "BAJO");
+
+        if (power <= 0) {
+            triggerJumpscare('boiled');
+        }
+    }, 1000);
+
+    // RELOJ DEL JUEGO (Ganas a las 6 AM)
+    setInterval(() => {
+        if (gameOver) return;
+        hour++;
+        if (hour === 13) hour = 1;
+        document.getElementById('hour-val').innerText = hour;
+        if (hour === 6) {
+            gameOver = true;
+            alert("¡6:00 AM! SOBREVIVISTE A LA NOCHE EN EL UNIVERSO DE DOCTOR NOWHERE.");
+            location.reload();
+        }
+    }, 25000);
+
+    function triggerJumpscare(monster) {
+        gameOver = true;
+        playJumpscareSound();
+        document.getElementById('jumpscare-screen').style.display = 'flex';
+        let svg = document.getElementById('jumpscare-svg');
+
+        if (monster === 'boiled') {
+            svg.innerHTML = `
+                <rect width="200" height="200" fill="#200"/>
+                <circle cx="100" cy="100" r="80" fill="#aa0000"/>
+                <circle cx="70" cy="80" r="20" fill="#fff"/><circle cx="70" cy="80" r="8" fill="#000"/>
+                <circle cx="130" cy="80" r="20" fill="#fff"/><circle cx="130" cy="80" r="8" fill="#000"/>
+                <ellipse cx="100" cy="140" rx="35" ry="40" fill="#000"/>
+            `;
+        } else {
+            svg.innerHTML = `
+                <rect width="200" height="200" fill="#020"/>
+                <polygon points="100,20 40,180 160,180" fill="#153515" stroke="#44ff44" stroke-width="4"/>
+                <circle cx="80" cy="90" r="15" fill="#ff0000"/>
+                <circle cx="120" cy="90" r="15" fill="#ff0000"/>
+                <line x1="100" y1="110" x2="100" y2="170" stroke="#000" stroke-width="10"/>
+            `;
+        }
+    }
+
+    // TECLAS DE ACCESO RÁPIDO
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'q' || e.key === 'Q') toggleLight('left');
+        if (e.key === 'l' || e.key === 'L') toggleDoor('left');
+        if (e.key === 'e' || e.key === 'E') toggleLight('right');
+        if (e.key === 'r' || e.key === 'R') toggleDoor('right');
+        if (e.key === ' ') toggleMonitor();
+    });
+</script>
+</body>
+</html>
+"""
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(fnaf_html_content)
+
+print("Código FNAF de Doctor Nowhere generado exitosamente.")
